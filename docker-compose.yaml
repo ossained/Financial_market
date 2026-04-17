@@ -1,0 +1,76 @@
+# Apex Wealth - Airflow Docker Setup
+# =============================================
+# HOW TO START:   docker compose up
+# HOW TO STOP:    docker compose down
+# HOW TO RESTART: docker compose down && docker compose up
+#
+# AIRFLOW UI: http://localhost:8080  —  admin / admin
+# =============================================
+
+# Shared settings reused by webserver, scheduler, and init
+x-airflow-common: &airflow-common
+  image: apache/airflow:2.9.2          # Airflow 2 
+  env_file: .env
+  environment:
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor          # simple mode — no extra worker containers
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-db/airflow
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'           # hide the 50+ built-in example DAGs
+    AIRFLOW__WEBSERVER__SECRET_KEY: 'apex_secret_key_2026'  # shared key so logs work across containers
+    _PIP_ADDITIONAL_REQUIREMENTS: "requests pandas psycopg2-binary sqlalchemy python-dotenv"
+    DB_HOST: host.docker.internal      # reaches YOUR machine's Postgres from inside Docker
+                                       # change to 'stock-db' if using the Docker Postgres backup
+  volumes:
+    - ./dags:/opt/airflow/dags         # your local dags/ folder — edits show instantly, no restart needed
+  depends_on:
+    airflow-db:
+      condition: service_healthy
+
+
+services:
+
+  # 1. Airflow's internal database — stores run history, users, logs (NOT your stock data)
+  airflow-db:
+    image: postgres:15
+    container_name: airflow-db
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "airflow"]
+      interval: 5s
+      retries: 5
+
+
+  # 2. Runs once on startup: creates Airflow tables + admin user, then exits
+  #    '|| true' on users create means: if admin already exists, don't fail — just skip
+  airflow-init:
+    <<: *airflow-common
+    container_name: airflow-init
+    command: bash -c "airflow db migrate && (airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@apex.com || true)"
+
+
+  # 3. The Airflow web UI — open http://localhost:8080 after init completes
+  #    restart: unless-stopped means: if it crashes during startup, Docker brings it back
+  airflow-webserver:
+    <<: *airflow-common
+    container_name: airflow-webserver
+    command: webserver
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+
+  # 4. The scheduler — watches dags/ and triggers runs on schedule or when you click Run
+  #    restart: unless-stopped means: auto-recovers if it crashes
+  airflow-scheduler:
+    <<: *airflow-common
+    container_name: airflow-scheduler
+    command: scheduler
+    restart: unless-stopped
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
