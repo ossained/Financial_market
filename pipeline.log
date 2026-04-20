@@ -803,3 +803,98 @@ Response headers:
     'Date': 'Mon, 20 Apr 2026 07:18:52 GMT'
 2026-04-20 08:18:52,303 | INFO | Uploaded -> curated/all_data/date=2026-04-20/all_data.parquet
 2026-04-20 08:18:52,303 | INFO | Pipeline completed successfully for 2026-04-20.
+2026-04-20 08:22:56,447 | INFO | Environment variables loaded successfully.
+2026-04-20 08:22:56,492 | INFO | Fetching price data for AAPL...
+2026-04-20 08:22:57,041 | INFO | Price data processed for AAPL
+2026-04-20 08:22:57,041 | INFO | Fetching overview for AAPL...
+2026-04-20 08:22:57,448 | WARNING | Rate limit hit. Waiting 60 seconds...
+2026-04-20 08:23:57,913 | INFO | Overview fetched for AAPL
+2026-04-20 08:23:57,918 | INFO | Merged price + overview into all_data
+2026-04-20 08:23:57,926 | INFO |      datetime    open    high       low   close    volume symbol  daily_return  price_range  prev_close  price_direction company_name      sector exchange
+0  2025-11-21  265.95  273.33  265.6700  271.49  59030832   AAPL      0.000000       7.6600        0.00                0    Apple Inc  TECHNOLOGY   NASDAQ
+1  2025-11-24  270.90  277.00  270.9000  275.92  65585796   AAPL      1.631736       6.1000      271.49                1    Apple Inc  TECHNOLOGY   NASDAQ
+2  2025-11-25  275.27  280.38  275.2500  276.97  46914220   AAPL      0.380545       5.1300      275.92                1    Apple Inc  TECHNOLOGY   NASDAQ
+3  2025-11-26  276.96  279.53  276.6300  277.55  33431423   AAPL      0.209409       2.9000      276.97                1    Apple Inc  TECHNOLOGY   NASDAQ
+4  2025-11-28  277.26  279.00  275.9865  278.85  20135620   AAPL      0.468384       3.0135      277.55                1    Apple Inc  TECHNOLOGY   NASDAQ
+2026-04-20 08:23:57,944 | INFO | Request URL: 'https://alphadatalake.blob.core.windows.net/stockmarket/raw/stock_prices/date%3D2026-04-20/prices.parquet'
+Request method: 'PUT'
+Request headers:
+    'Content-Length': '12779'
+    'x-ms-blob-type': 'REDACTED'
+    'x-ms-version': 'REDACTED'
+    'Content-Type': 'application/octet-stream'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.14.0 (Windows-10-10.0.19045-SP0)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e53e3877-3c89-11f1-9cfb-900f0cc9f392'
+    'Authorization': 'REDACTED'
+A body is sent with the request
+2026-04-20 08:23:58,416 | INFO | Response status: 201
+Response headers:
+    'Content-Length': '0'
+    'Content-MD5': 'REDACTED'
+    'Last-Modified': 'Mon, 20 Apr 2026 07:23:59 GMT'
+    'ETag': '"0x8DE9EADCA83E24C"'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '678e67ff-301e-0053-4b96-d0e69d000000'
+    'x-ms-client-request-id': 'e53e3877-3c89-11f1-9cfb-900f0cc9f392'
+    'x-ms-version': 'REDACTED'
+    'x-ms-content-crc64': 'REDACTED'
+    'x-ms-request-server-encrypted': 'REDACTED'
+    'Date': 'Mon, 20 Apr 2026 07:23:59 GMT'
+2026-04-20 08:23:58,418 | INFO | Uploaded -> raw/stock_prices/date=2026-04-20/prices.parquet
+2026-04-20 08:23:58,420 | INFO | Request URL: 'https://alphadatalake.blob.core.windows.net/stockmarket/raw/stock_overview/date%3D2026-04-20/overview.parquet'
+Request method: 'PUT'
+Request headers:
+    'Content-Length': '2731'
+    'x-ms-blob-type': 'REDACTED'
+    'x-ms-version': 'REDACTED'
+    'Content-Type': 'application/octet-stream'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.14.0 (Windows-10-10.0.19045-SP0)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e586cec9-3c89-11f1-a4d3-900f0cc9f392'
+    'Authorization': 'REDACTED'
+A body is sent with the request
+2026-04-20 08:23:58,496 | INFO | Response status: 201
+Response headers:
+    'Content-Length': '0'
+    'Content-MD5': 'REDACTED'
+    'Last-Modified': 'Mon, 20 Apr 2026 07:23:59 GMT'
+    'ETag': '"0x8DE9EADCA905D80"'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '678e6840-301e-0053-8096-d0e69d000000'
+    'x-ms-client-request-id': 'e586cec9-3c89-11f1-a4d3-900f0cc9f392'
+    'x-ms-version': 'REDACTED'
+    'x-ms-content-crc64': 'REDACTED'
+    'x-ms-request-server-encrypted': 'REDACTED'
+    'Date': 'Mon, 20 Apr 2026 07:23:59 GMT'
+2026-04-20 08:23:58,497 | INFO | Uploaded -> raw/stock_overview/date=2026-04-20/overview.parquet
+2026-04-20 08:23:58,500 | INFO | Request URL: 'https://alphadatalake.blob.core.windows.net/stockmarket/curated/all_data/date%3D2026-04-20/all_data.parquet'
+Request method: 'PUT'
+Request headers:
+    'Content-Length': '14390'
+    'x-ms-blob-type': 'REDACTED'
+    'x-ms-version': 'REDACTED'
+    'Content-Type': 'application/octet-stream'
+    'Accept': 'application/xml'
+    'User-Agent': 'azsdk-python-storage-blob/12.28.0 Python/3.14.0 (Windows-10-10.0.19045-SP0)'
+    'x-ms-date': 'REDACTED'
+    'x-ms-client-request-id': 'e593230f-3c89-11f1-9276-900f0cc9f392'
+    'Authorization': 'REDACTED'
+A body is sent with the request
+2026-04-20 08:23:58,592 | INFO | Response status: 201
+Response headers:
+    'Content-Length': '0'
+    'Content-MD5': 'REDACTED'
+    'Last-Modified': 'Mon, 20 Apr 2026 07:23:59 GMT'
+    'ETag': '"0x8DE9EADCA9F30E4"'
+    'Server': 'Windows-Azure-Blob/1.0 Microsoft-HTTPAPI/2.0'
+    'x-ms-request-id': '678e6871-301e-0053-2b96-d0e69d000000'
+    'x-ms-client-request-id': 'e593230f-3c89-11f1-9276-900f0cc9f392'
+    'x-ms-version': 'REDACTED'
+    'x-ms-content-crc64': 'REDACTED'
+    'x-ms-request-server-encrypted': 'REDACTED'
+    'Date': 'Mon, 20 Apr 2026 07:23:59 GMT'
+2026-04-20 08:23:58,593 | INFO | Uploaded -> curated/all_data/date=2026-04-20/all_data.parquet
+2026-04-20 08:23:58,593 | INFO | Pipeline completed successfully for 2026-04-20.

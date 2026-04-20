@@ -74,23 +74,21 @@ CREATE TABLE EDW.fact_prices (
 
 
 
---insert records
-INSERT INTO EDW.dim_date (
-    full_date,
-    year,
-    quarter,
-    month,
-    day,
-    day_of_week
-)
+--insert records-- Insert only new dates not already in dim_date
+INSERT INTO EDW.dim_date (full_date, year, quarter, month, day, day_of_week)
 SELECT DISTINCT
-    CAST(event_datetime AS DATE) AS full_date,
+    CAST(event_datetime AS DATE),
     YEAR(event_datetime),
     DATEPART(QUARTER, event_datetime),
     MONTH(event_datetime),
     DAY(event_datetime),
     DATENAME(WEEKDAY, event_datetime)
-FROM EDW.staging_all_data;
+FROM EDW.staging_all_data s
+WHERE event_datetime IS NOT NULL
+AND NOT EXISTS (
+    SELECT 1 FROM EDW.dim_date d
+    WHERE d.full_date = CAST(s.event_datetime AS DATE)
+);
 
 
 INSERT INTO EDW.dim_company (
@@ -120,12 +118,17 @@ WHERE c.is_current = 1
         c.sector <> s.sector OR
         c.exchange_name <> s.exchange_name
       );
-
+---DIm_exchange
 INSERT INTO EDW.dim_exchange (exchange_name)
 SELECT DISTINCT exchange_name
-FROM EDW.staging_all_data;
+FROM EDW.staging_all_data s
+WHERE s.exchange_name IS NOT NULL
+AND NOT EXISTS (
+    SELECT 1 FROM EDW.dim_exchange d
+    WHERE d.exchange_name = s.exchange_name
+);
 
-
+-- STEP 1: INSERT new records only
 INSERT INTO EDW.fact_prices (
     date_sk, company_sk, exchange_sk,
     open_price, high_price, low_price, close_price,
@@ -148,22 +151,27 @@ JOIN EDW.dim_company c
     ON c.symbol = s.symbol
     AND c.is_current = 1
 JOIN EDW.dim_exchange e
-    ON e.exchange_name = c.exchange_name;
+    ON e.exchange_name = c.exchange_name
+WHERE NOT EXISTS (
+    SELECT 1 FROM EDW.fact_prices f
+    WHERE f.date_sk = d.date_sk
+    AND f.company_sk = c.company_sk
+);
 
-
-    UPDATE f
+-- STEP 2: UPDATE calculated columns on newly inserted rows
+UPDATE f
 SET
     f.price_range     = f.high_price - f.low_price,
-    f.prev_close      = prev.close_price,
-    f.daily_return    = ROUND((f.close_price - prev.close_price) / prev.close_price * 100, 4),
+    f.prev_close      = ISNULL(prev.close_price, 0),        --  0 instead of NULL
+    f.daily_return    = ISNULL(ROUND((f.close_price - prev.close_price) / prev.close_price * 100, 4), 0),  -- ✅ 0 instead of NULL
     f.price_direction = CASE 
                             WHEN f.close_price > prev.close_price THEN 'UP'
                             WHEN f.close_price < prev.close_price THEN 'DOWN'
                             ELSE 'FLAT'
                         END
 FROM EDW.fact_prices f
-JOIN EDW.dim_date d ON d.date_sk = f.date_sk
-JOIN EDW.fact_prices prev 
+LEFT JOIN EDW.dim_date d ON d.date_sk = f.date_sk   -- LEFT JOIN so first row is not excluded
+LEFT JOIN EDW.fact_prices prev 
     ON prev.company_sk = f.company_sk
     AND prev.date_sk = (
         SELECT MAX(date_sk) 
