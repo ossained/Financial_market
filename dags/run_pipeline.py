@@ -9,7 +9,7 @@ from io import BytesIO
 from dotenv import load_dotenv
 
 
-# LOGGER CONFIGURATION and setting up
+# LOGGER CONFIGURATION 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
