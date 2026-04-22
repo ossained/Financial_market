@@ -8,9 +8,8 @@ from azure.storage.blob import BlobServiceClient
 from io import BytesIO
 from dotenv import load_dotenv
 
-# ---------------------------------------------------------
-# LOGGER CONFIGURATION
-# ---------------------------------------------------------
+
+# LOGGER CONFIGURATION and setting up
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -21,9 +20,8 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------
+
 # LOAD ENV VARS
-# ---------------------------------------------------------
 load_dotenv()
 
 API_KEY = os.getenv("ALPHA_VANTAGE_KEY") or os.getenv("API_KEY")
@@ -36,9 +34,8 @@ if not ADLS_KEY:
 
 logger.info("Environment variables loaded successfully.")
 
-# ---------------------------------------------------------
+
 # TRANSFORM DAILY PRICE DATA
-# ---------------------------------------------------------
 def transform_data(data, symbol):
     try:
         time_series = data["Time Series (Daily)"]
@@ -46,7 +43,6 @@ def transform_data(data, symbol):
 
         df = df.reset_index().rename(columns={"index": "datetime"})
 
-        # Alpha Vantage returns YYYY-MM-DD strings
         df["datetime"] = pd.to_datetime(df["datetime"])
 
         df = df.rename(columns={
@@ -83,9 +79,8 @@ def transform_data(data, symbol):
         logger.error(f"Transform failed for {symbol}: {e}")
         return None
 
-# ---------------------------------------------------------
+
 # FETCH WITH RETRY + ERROR HANDLING
-# ---------------------------------------------------------
 def fetch_with_retry(url, max_retries=3):
     for attempt in range(max_retries):
         try:
@@ -110,14 +105,13 @@ def fetch_with_retry(url, max_retries=3):
     logger.error("Max retries reached. Skipping.")
     return None
 
-# ---------------------------------------------------------
+
 # FETCH PRICE + OVERVIEW FOR MULTIPLE SYMBOLS
-# ---------------------------------------------------------
 def fetch_data(symbols, api_key):
     price_frames = []
     overview_rows = []
 
-    for symbol in symbols:
+    for i, symbol in enumerate(symbols):
         logger.info(f"Fetching price data for {symbol}...")
 
         url_price = (
@@ -154,6 +148,11 @@ def fetch_data(symbols, api_key):
         })
         logger.info(f"Overview fetched for {symbol}")
 
+        # Wait between symbols to avoid rate limit
+        if i < len(symbols) - 1:
+            logger.info("Waiting 15 seconds before next symbol...")
+            time.sleep(15)
+
     if not price_frames:
         logger.error("No price frames collected.")
         return None, None
@@ -163,9 +162,8 @@ def fetch_data(symbols, api_key):
 
     return df_prices, df_overview
 
-# ---------------------------------------------------------
+
 # UPLOAD TO ADLS GEN2
-# ---------------------------------------------------------
 def upload_to_adls(df, container_client, path):
     try:
         buffer = BytesIO()
@@ -181,13 +179,12 @@ def upload_to_adls(df, container_client, path):
         logger.error(f"Upload failed for {path}: {e}")
         raise
 
-# ---------------------------------------------------------
+
 # MAIN PIPELINE
-# ---------------------------------------------------------
 def run_pipeline():
     try:
         api_key = API_KEY
-        symbols = ["AAPL"]
+        symbols = ["AAPL", "MSFT", "GOOGL", "AMZN"]
 
         storage_account_name = "alphadatalake"
         container_name = "stockmarket"
@@ -215,14 +212,14 @@ def run_pipeline():
         # Merge
         all_data = df_prices.merge(df_overview, on="symbol", how="left")
 
-        # ⭐ FINAL FIX: Convert datetime to string BEFORE writing parquet
+        # Convert datetime to string BEFORE writing parquet
         df_prices["datetime"] = df_prices["datetime"].astype(str)
         all_data["datetime"] = all_data["datetime"].astype(str)
 
         logger.info("Merged price + overview into all_data")
         logger.info(all_data.head().to_string())
 
-        # Upload raw + curated
+        # Upload raw + refined
         upload_to_adls(
             df_prices,
             container_client,
@@ -238,7 +235,7 @@ def run_pipeline():
         upload_to_adls(
             all_data,
             container_client,
-            f"curated/all_data/date={run_date_str}/all_data.parquet"
+            f"refined/all_data/date={run_date_str}/all_data.parquet"  #  changed from curated
         )
 
         logger.info(f"Pipeline completed successfully for {run_date_str}.")
@@ -247,8 +244,7 @@ def run_pipeline():
         logger.critical(f"Pipeline failed: {e}")
         raise
 
-# ---------------------------------------------------------
+
 # ENTRYPOINT
-# ---------------------------------------------------------
 if __name__ == "__main__":
     run_pipeline()
