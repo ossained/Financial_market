@@ -9,7 +9,7 @@ from io import BytesIO
 from dotenv import load_dotenv
 
 
-# LOGGER CONFIGURATION and setting up
+# LOGGER CONFIGURATION
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s | %(levelname)s | %(message)s",
@@ -19,6 +19,7 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+logging.getLogger("azure").setLevel(logging.WARNING)
 
 
 # LOAD ENV VARS
@@ -35,6 +36,45 @@ if not ADLS_KEY:
 logger.info("Environment variables loaded successfully.")
 
 
+# DATA QUALITY CHECKS
+def run_quality_checks(df, name):
+    logger.info(f"Running quality checks on [{name}]...")
+
+    if df.empty:
+        raise Exception(f"[{name}] Dataset is empty.")
+
+    # Null checks
+    nulls = df.isnull().sum()
+    for col, count in nulls[nulls > 0].items():
+        logger.warning(f"[{name}] '{col}' has {count} null(s).")
+
+    # Duplicate checks
+    dup_key = ["symbol", "datetime"] if name == "prices" else ["symbol"]
+    dups = df.duplicated(subset=dup_key).sum()
+    if dups > 0:
+        logger.warning(f"[{name}] {dups} duplicate row(s) on {dup_key}.")
+
+    # Price logic checks
+    if name == "prices":
+        if (df["high"] < df["low"]).any():
+            raise Exception(f"[{name}] Some rows have high < low.")
+        if (df[["open", "high", "low", "close"]] < 0).any().any():
+            raise Exception(f"[{name}] Negative price values found.")
+        if (df["volume"] < 0).any():
+            raise Exception(f"[{name}] Negative volume values found.")
+
+    # Overview checks
+    if name == "overview":
+        if df["company_name"].isnull().any():
+            raise Exception(f"[{name}] Some rows have missing company_name.")
+        if df["sector"].isnull().any():
+            raise Exception(f"[{name}] Some rows have missing sector.")
+        if df["exchange"].isnull().any():
+            raise Exception(f"[{name}] Some rows have missing exchange.")
+
+    logger.info(f"[{name}] Quality checks passed.")
+
+
 # TRANSFORM DAILY PRICE DATA
 def transform_data(data, symbol):
     try:
@@ -42,7 +82,6 @@ def transform_data(data, symbol):
         df = pd.DataFrame.from_dict(time_series, orient="index")
 
         df = df.reset_index().rename(columns={"index": "datetime"})
-
         df["datetime"] = pd.to_datetime(df["datetime"])
 
         df = df.rename(columns={
@@ -148,7 +187,6 @@ def fetch_data(symbols, api_key):
         })
         logger.info(f"Overview fetched for {symbol}")
 
-        # Wait between symbols to avoid rate limit
         if i < len(symbols) - 1:
             logger.info("Waiting 15 seconds before next symbol...")
             time.sleep(15)
@@ -209,6 +247,12 @@ def run_pipeline():
             logger.warning(f"No price data loaded for {run_date_str}. Skipping upload.")
             return
 
+        # DATA QUALITY CHECKS (before any upload)
+        logger.info("========== STARTING DATA QUALITY CHECKS ==========")
+        run_quality_checks(df_prices, name="prices")
+        run_quality_checks(df_overview, name="overview")
+        logger.info("========== ALL QUALITY CHECKS PASSED ==========")
+
         # Merge
         all_data = df_prices.merge(df_overview, on="symbol", how="left")
 
@@ -235,7 +279,7 @@ def run_pipeline():
         upload_to_adls(
             all_data,
             container_client,
-            f"refined/all_data/date={run_date_str}/all_data.parquet"  #  changed from curated
+            f"refined/all_data/date={run_date_str}/all_data.parquet"
         )
 
         logger.info(f"Pipeline completed successfully for {run_date_str}.")
