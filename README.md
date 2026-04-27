@@ -98,11 +98,6 @@ Financial Market Data (e.g., stock prices, company overview)
                            |
                            v
                 +----------------------+
-                | Azure SQL (Staging) |
-                +----------+-----------+
-                           |
-                           v
-                +----------------------+
                 |   ADF Pipelines     |
                 |    (Daily Loads)    |
                 +----------+-----------+
@@ -121,7 +116,7 @@ Financial Market Data (e.g., stock prices, company overview)
 | Orchestration      | Apache Airflow (Docker)     |
 | Compute            | Python                      |
 | Cloud Storage      | Azure Data Lake Gen2        |
-| Database           | Azure SQL Database          |
+| Datawarehouse      | Azure data studio          |
 | Data Movement      | Azure Data Factory          |
 | Containerization   | Docker                      |
 | Version Control    | GitHub                      |
@@ -156,10 +151,7 @@ Airflow (running in Docker) schedules and manages:
 
 * Retries
 
-## 5. Azure SQL Staging
-Airflow loads curated data into Azure SQL Staging Tables.
-
-## 6. ADF Enterprise Loading
+## 5. ADF Enterprise Loading
 ADF pipelines move data from staging into:
 
 * dim_date
